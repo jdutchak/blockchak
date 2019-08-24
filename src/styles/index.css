@@ -1,92 +1,100 @@
 @import 'normalize.css';
 
 * {
-    outline: none !important;
+  outline: none !important;
 }
 
 html {
-    font-size: 62.5%;
-    font-family: Muli, Roboto, Helvetica Neue, Arial, sans-serif;
-    background-color: #262933;
+  font-size: 62.5%;
+  font-family: Muli, Roboto, Helvetica Neue, Arial, sans-serif;
+  background-color: #262933;
 }
 
 body {
-    font-size: 14px;
-    line-height: 1.4;
+  font-size: 14px;
+  line-height: 1.4;
 }
 
-html, body, #root {
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    position: relative;
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  position: relative;
 }
 
-h1, .h1 {
-    font-size: 24px;
+h1,
+.h1 {
+  font-size: 24px;
 }
 
-h2, .h2 {
-    font-size: 20px;
+h2,
+.h2 {
+  font-size: 20px;
 }
 
-h3, .h3 {
-    font-size: 16px;
+h3,
+.h3 {
+  font-size: 16px;
 }
 
-h4, .h4 {
-    font-size: 15px;
+h4,
+.h4 {
+  font-size: 15px;
 }
 
-h5, .h5 {
-    font-size: 13px;
+h5,
+.h5 {
+  font-size: 13px;
 }
 
-h6, .h6 {
-    font-size: 12px;
+h6,
+.h6 {
+  font-size: 12px;
 }
 
 .ps > .ps__rail-y,
 .ps > .ps__rail-x {
-    z-index: 99;
+  z-index: 99;
 }
 
-a[role=button] {
-    text-decoration: none;
+a[role='button'] {
+  text-decoration: none;
 }
 
-[role="tooltip"] {
-    z-index: 999;
+[role='tooltip'] {
+  z-index: 999;
 }
 
 /* Medium Devices, Desktops Only */
 @media only screen and (min-width: 992px) {
-    ::-webkit-scrollbar {
-        width: 12px;
-        height: 12px;
-        background-color: rgba(0, 0, 0, 0);
-    }
+  ::-webkit-scrollbar {
+    width: 12px;
+    height: 12px;
+    background-color: rgba(0, 0, 0, 0);
+  }
 
-    ::-webkit-scrollbar:hover {
-        width: 12px;
-        height: 12px;
-        background-color: rgba(0, 0, 0, 0.06);
-    }
+  ::-webkit-scrollbar:hover {
+    width: 12px;
+    height: 12px;
+    background-color: rgba(0, 0, 0, 0.06);
+  }
 
-    ::-webkit-scrollbar-thumb {
-        border: 2px solid transparent;
-        box-shadow: inset 0 0 0 20px rgba(0, 0, 0, 0.24);
-        border-radius: 20px;
-    }
+  ::-webkit-scrollbar-thumb {
+    border: 2px solid transparent;
+    box-shadow: inset 0 0 0 20px rgba(0, 0, 0, 0.24);
+    border-radius: 20px;
+  }
 
-    ::-webkit-scrollbar-thumb:active {
-        box-shadow: inset 0 0 0 20px rgba(0, 0, 0, 0.37);
-        border-radius: 20px;
-    }
+  ::-webkit-scrollbar-thumb:active {
+    box-shadow: inset 0 0 0 20px rgba(0, 0, 0, 0.37);
+    border-radius: 20px;
+  }
 }
 
 form label {
-    z-index: 99;
+  z-index: 99;
 }
 
 @import 'print.css';
@@ -147,6 +155,7 @@ form label {
 }
 .PDFPreview__container__document {
   margin: 1em 0;
+  position: relative;
 }
 .PDFPreview__container__document .react-pdf__Document {
   display: flex;
@@ -165,4 +174,55 @@ form label {
 .PDFPreview__container__document .react-pdf__message {
   padding: 20px;
   color: white;
+}
+
+.PDFPreview__container__document .signature-placer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: calc(100% - 2em);
+  height: calc(100% - 2em);
+  margin: 1em;
+}
+
+.PDFPreview__container__document .signature-placer .sign-place {
+  position: absolute;
+  background-color: rgba(0, 179, 255, 0.1);
+  border: 1px solid rgba(0, 179, 255, 1);
+  cursor: pointer;
+  color: rgba(0, 179, 255, 1);
+  border-radius: 3px;
+  display: flex;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  justify-content: center; /* align horizontal */
+  align-items: center;
+  user-select: none;
+}
+
+.PDFPreview__container__document .signature-placer .sign-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 100;
+}
+
+.PDFPreview__container__document .signature-placer .sign-wrap {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 50%;
+  transform: translate(-50%, -50%);
+  background-color: rgba(234, 234, 234, 1);
+  border-radius: 3px;
+  padding: 20px;
+  z-index: 100;
+}
+
+.PDFPreview__container__document .signature-placer .sign-wrap .sigContainer {
+  height: 200px;
 }
