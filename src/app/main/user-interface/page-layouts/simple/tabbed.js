@@ -34,20 +34,30 @@ function lim(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
 
-function SignPlace({ place, updatePlace }) {
+let justDragged = false;
+function SignPlace({
+  place,
+  updatePlace,
+  canSign,
+  canMove,
+  onDragEnd,
+  onSignFinish,
+  onRemove
+}) {
   const ref = React.useRef();
   const sigCanvasRef = React.useRef();
-
-  const [signURL, setSignURL] = React.useState('');
   const [isSigning, setIsSigning] = React.useState(false);
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragOffset, setDragOffset] = React.useState();
 
   React.useEffect(() => {
+    if (!canMove) {
+      return;
+    }
+    if (!isDragging) {
+      return;
+    }
     const onMove = e => {
-      if (!isDragging) {
-        return;
-      }
       const parent = ref.current.parentElement;
       const box = parent.getBoundingClientRect();
 
@@ -94,7 +104,12 @@ function SignPlace({ place, updatePlace }) {
     };
 
     const onUp = () => {
+      justDragged = true;
       setIsDragging(false);
+      onDragEnd();
+      setTimeout(() => {
+        justDragged = false;
+      }, 50);
     };
     window.addEventListener('mousemove', onMove);
     window.addEventListener('mouseup', onUp);
@@ -102,13 +117,18 @@ function SignPlace({ place, updatePlace }) {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  });
+  }, [isDragging]);
   return (
     <React.Fragment>
       <div
         className="sign-place"
         ref={ref}
         onMouseDown={e => {
+          justDragged = false;
+          if (!canMove) {
+            return;
+          }
+
           setIsDragging(true);
           const box = e.currentTarget.getBoundingClientRect();
           const offset = {
@@ -120,16 +140,23 @@ function SignPlace({ place, updatePlace }) {
           setDragOffset(offset);
         }}
         onClick={() => {
-          setIsSigning(true);
+          if (canSign && !justDragged) {
+            setIsSigning(true);
+          }
         }}
         style={{
           left: Math.min(place.x1, place.x2) + '%',
           top: Math.min(place.y1, place.y2) + '%',
           width: Math.abs(place.x1 - place.x2) + '%',
           height: Math.abs(place.y1 - place.y2) + '%',
-          backgroundImage: `url(${signURL})`
+          backgroundImage: `url(${place.signURL})`
         }}
       >
+        {canMove && (
+          <div className="remove-button" onClick={onRemove}>
+            x
+          </div>
+        )}
         Sign here
       </div>
       {isSigning && (
@@ -145,6 +172,16 @@ function SignPlace({ place, updatePlace }) {
               />
             </div>
             <div className="sigFooter">
+              <Button
+                onClick={() => {
+                  setIsSigning(false);
+                }}
+                variant="contained"
+                color="secondary"
+              >
+                Cancel
+              </Button>
+              &nbsp;
               <Button
                 onClick={() => {
                   sigCanvasRef.current.clear();
@@ -163,7 +200,14 @@ function SignPlace({ place, updatePlace }) {
                   const url = sigCanvasRef.current
                     .getTrimmedCanvas()
                     .toDataURL();
-                  setSignURL(url);
+
+                  updatePlace({
+                    signURL: url
+                  });
+                  onSignFinish({
+                    ...place,
+                    signURL: url
+                  });
                 }}
               >
                 Done
@@ -176,15 +220,28 @@ function SignPlace({ place, updatePlace }) {
   );
 }
 
-function SignaturePlacer() {
+function SignaturePlacer({
+  signatures,
+  updateSignatures,
+  signOnly,
+  onSignFinish
+}) {
   const [drawing, setDrawing] = React.useState(false);
   const [signPlaces, setSignPlaces] = React.useState([]);
+
+  // load initial data
+  React.useEffect(() => {
+    setSignPlaces(signatures);
+  }, [signatures]);
 
   return (
     <div
       className="signature-placer"
       onMouseDown={e => {
         if (e.target !== e.currentTarget) {
+          return;
+        }
+        if (signOnly) {
           return;
         }
         setDrawing(true);
@@ -222,7 +279,10 @@ function SignaturePlacer() {
         const tooSmall = width < 2 || height < 2;
 
         if (tooSmall) {
+          // remove last
           setSignPlaces(signPlaces.slice(0, signPlaces.length - 1));
+        } else {
+          updateSignatures(signPlaces.slice());
         }
       }}
     >
@@ -234,6 +294,20 @@ function SignaturePlacer() {
             updatePlace={newPlace => {
               signPlaces.splice(i, 1, newPlace);
               setSignPlaces(signPlaces.slice());
+            }}
+            onDragEnd={() => {
+              updateSignatures(signPlaces);
+            }}
+            canSign={signOnly}
+            canMove={!signOnly}
+            onSignFinish={newPlace => {
+              signPlaces.splice(i, 1, newPlace);
+              updateSignatures(signPlaces.slice());
+              onSignFinish();
+            }}
+            onRemove={() => {
+              signPlaces.splice(i, 1);
+              updateSignatures(signPlaces.slice());
             }}
           />
         );
@@ -254,8 +328,12 @@ function SimpleTabbedSample() {
     localStorage.getItem('sigContent') || ''
   );
   const [pdfContent, setPDFContent] = useState('');
+
+  const [resultContent, setResultPDFContent] = useState('');
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
+
+  const [signaturesByPage, setSignatures] = useState({});
   // const [gasPrice, setGasPrice] = useState(0);
 
   const handleTabChange = (event, value) => {
@@ -301,7 +379,6 @@ function SimpleTabbedSample() {
 
     window
       .html2pdf()
-      .from(document.getElementsByClassName('fr-view')[0])
       .set(opt)
       .from(document.getElementsByClassName('fr-view')[0])
       .toPdf()
@@ -309,6 +386,27 @@ function SimpleTabbedSample() {
       .then(data => {
         // console.log(data);
         setPDFContent(data);
+      });
+  };
+
+  const previewSignDocument = async () => {
+    const opt = {
+      margin: 1,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+    };
+
+    window
+      .html2pdf()
+      .from(document.getElementsByClassName('react-pdf__Page')[0])
+      .set(opt)
+      .from(document.getElementsByClassName('react-pdf__Page')[0])
+      .toPdf()
+      .output('datauristring')
+      .then(data => {
+        // console.log(data);
+        setResultPDFContent(data);
       });
   };
 
@@ -342,12 +440,14 @@ function SimpleTabbedSample() {
           className="w-full h-64 border-b-1"
         >
           <Tab className="h-64" label="Create Document" />
-          <Tab className="h-64" label="Create Signature" />
-          <Tab className="h-64" label="Document Preview" />
+          {/* <Tab className="h-64" label="Create Signature" /> */}
+          {/* <Tab className="h-64" label="Document Preview" /> */}
           <Tab className="h-64" label="Signing Editor" />
           <Tab className="h-64" label="Test Signing" />
-          <Tab className="h-64" label="Item Six" />
-          <Tab className="h-64" label="Item Seven" />
+
+          <Tab className="h-64" label="Finished Preview" />
+          {/* <Tab className="h-64" label="Item Six" /> */}
+          {/* <Tab className="h-64" label="Item Seven" /> */}
         </Tabs>
       }
       content={
@@ -377,7 +477,7 @@ function SimpleTabbedSample() {
               />
             </div>
           )}
-          {selectedTab === 1 && (
+          {/* {selectedTab === 1 && (
             <div>
               <h3 className="mb-16">Create your signature</h3>
               <div className="sigContainer">
@@ -416,8 +516,8 @@ function SimpleTabbedSample() {
                 </Button>
               </div>
             </div>
-          )}
-          {selectedTab === 2 && (
+          )} */}
+          {selectedTab === 1 && (
             <div>
               <h3 className="mb-16">Assign signature and initial points</h3>
               <div style={{ visibility: 'hidden', height: '0' }}>
@@ -437,7 +537,73 @@ function SimpleTabbedSample() {
                     >
                       <Page pageNumber={pageNumber} />
                     </Document>
-                    <SignaturePlacer />
+                    <SignaturePlacer
+                      signatures={signaturesByPage[pageNumber] || []}
+                      updateSignatures={signatures => {
+                        setSignatures({
+                          ...signatures,
+                          [pageNumber]: signatures
+                        });
+                      }}
+                    />
+                    {numPages && (
+                      <p>
+                        Page {pageNumber} of {numPages}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setPageNumber(Math.max(0, pageNumber - 1))}
+              >
+                Previous page
+              </Button>
+              &nbsp;
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() =>
+                  setPageNumber(Math.min(numPages, pageNumber + 1))
+                }
+              >
+                Next page
+              </Button>
+            </div>
+          )}
+          {selectedTab === 2 && (
+            <div>
+              <h3 className="mb-16">Try signing the doc</h3>
+              <div style={{ visibility: 'hidden', height: '0' }}>
+                <FroalaEditorView model={docContent} />
+              </div>
+              <Button onClick={previewDoc} variant="contained" color="primary">
+                Preview PDF
+              </Button>
+              <br />
+              <br />
+              <div className="PDFPreview">
+                <div className="PDFPreview__container">
+                  <div className="PDFPreview__container__document">
+                    <Document
+                      file={pdfContent}
+                      onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                    >
+                      <Page pageNumber={pageNumber} />
+                    </Document>
+                    <SignaturePlacer
+                      signatures={signaturesByPage[pageNumber] || []}
+                      updateSignatures={signatures => {
+                        setSignatures({
+                          ...signatures,
+                          [pageNumber]: signatures
+                        });
+                      }}
+                      signOnly
+                      onSignFinish={previewSignDocument}
+                    />
                     <p>
                       Page {pageNumber} of {numPages}
                     </p>
@@ -447,7 +613,7 @@ function SimpleTabbedSample() {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => setPageNumber(pageNumber - 1)}
+                onClick={() => setPageNumber(Math.max(0, pageNumber - 1))}
               >
                 Previous page
               </Button>
@@ -455,7 +621,9 @@ function SimpleTabbedSample() {
               <Button
                 variant="contained"
                 color="primary"
-                onClick={() => setPageNumber(pageNumber + 1)}
+                onClick={() =>
+                  setPageNumber(Math.min(numPages, pageNumber + 1))
+                }
               >
                 Next page
               </Button>
@@ -463,26 +631,41 @@ function SimpleTabbedSample() {
           )}
           {selectedTab === 3 && (
             <div>
-              <h3 className="mb-16">Test document signing</h3>
-              TODO
-            </div>
-          )}
-          {selectedTab === 4 && (
-            <div>
-              <h3 className="mb-16">Item Five</h3>
-              TODO
-            </div>
-          )}
-          {selectedTab === 5 && (
-            <div>
-              <h3 className="mb-16">Item Six</h3>
-              TODO
-            </div>
-          )}
-          {selectedTab === 6 && (
-            <div>
-              <h3 className="mb-16">Item Seven</h3>
-              <DemoContent />
+              <h3 className="mb-16">Result preview</h3>
+              <br />
+              <br />
+              <div className="PDFPreview">
+                <div className="PDFPreview__container">
+                  <div className="PDFPreview__container__document">
+                    <Document
+                      file={resultContent}
+                      onLoadSuccess={({ numPages }) => setNumPages(numPages)}
+                    >
+                      <Page pageNumber={pageNumber} />
+                    </Document>
+                    <p>
+                      Page {pageNumber} of {numPages}
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() => setPageNumber(Math.max(0, pageNumber - 1))}
+              >
+                Previous page
+              </Button>
+              &nbsp;
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={() =>
+                  setPageNumber(Math.min(numPages, pageNumber + 1))
+                }
+              >
+                Next page
+              </Button>
             </div>
           )}
         </div>

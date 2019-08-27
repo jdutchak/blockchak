@@ -201,6 +201,18 @@ form label {
   user-select: none;
 }
 
+.PDFPreview__container__document .signature-placer .sign-place .remove-button {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: translate(-50%, -50%);
+  border-radius: 15px;
+  background-color: rgba(255, 0, 192, 0.4);
+  border: 1px solid rgba(255, 0, 43, 1);
+  color: white;
+  padding: 3px 8px;
+}
+
 .PDFPreview__container__document .signature-placer .sign-overlay {
   position: fixed;
   top: 0;
