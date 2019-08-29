@@ -107,18 +107,12 @@ form label {
 
 @import 'tailwind.css';
 
-.sigContainer {
-  width: 100%;
-  height: 100%;
-  margin: 20px auto;
-  background-color: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 4px;
-}
-
 .sigPad {
   width: 100%;
   height: 100%;
+  background-color: #fff;
+  border: 1px solid #e8e8e8;
+  border-radius: 4px;
 }
 
 .sigFooter {
@@ -235,6 +229,14 @@ form label {
   z-index: 100;
 }
 
-.PDFPreview__container__document .signature-placer .sign-wrap .sigContainer {
-  height: 200px;
+.PDFPreview__container__document .signature-placer .sign-wrap .sign-container {
+  position: relative;
+  width: 100%;
+  padding-bottom: 100%;
+}
+
+.PDFPreview__container__document .signature-placer .sign-wrap .sign-inner {
+  position: absolute;
+  width: 100%;
+  height: 100%;
 }

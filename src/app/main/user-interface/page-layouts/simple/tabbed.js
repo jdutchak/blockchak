@@ -18,6 +18,8 @@ import 'react-pdf/dist/Page/AnnotationLayer.css';
 
 import SignatureCanvas from 'react-signature-canvas';
 
+import { injectSignaturesIntoPDF } from '../../../../utils/pdf';
+
 // import { Gas, defaultGasConfig } from 'dapparatus-core';
 
 // let gas = new Gas();
@@ -163,13 +165,24 @@ function SignPlace({
         <React.Fragment>
           <div className="sign-overlay" />
           <div className="sign-wrap">
-            <div className="sigContainer">
-              <SignatureCanvas
-                penColor="black"
-                maxWidth={1.5}
-                canvasProps={{ className: 'sigPad' }}
-                ref={sigCanvasRef}
-              />
+            <div
+              className="sign-container"
+              style={{
+                paddingBottom:
+                  (Math.abs(place.y1 - place.y2) /
+                    Math.abs(place.x1 - place.x2)) *
+                    100 +
+                  '%'
+              }}
+            >
+              <div className="sign-inner">
+                <SignatureCanvas
+                  penColor="black"
+                  maxWidth={1.5}
+                  canvasProps={{ className: 'sigPad' }}
+                  ref={sigCanvasRef}
+                />
+              </div>
             </div>
             <div className="sigFooter">
               <Button
@@ -197,9 +210,7 @@ function SignPlace({
                 color="primary"
                 onClick={() => {
                   setIsSigning(false);
-                  const url = sigCanvasRef.current
-                    .getTrimmedCanvas()
-                    .toDataURL();
+                  const url = sigCanvasRef.current.getCanvas().toDataURL();
 
                   updatePlace({
                     signURL: url
@@ -270,6 +281,9 @@ function SignaturePlacer({
         );
       }}
       onMouseUp={e => {
+        if (!drawing) {
+          return;
+        }
         setDrawing(false);
 
         const lastPlace = signPlaces[signPlaces.length - 1];
@@ -334,6 +348,19 @@ function SimpleTabbedSample() {
   const [pageNumber, setPageNumber] = useState(1);
 
   const [signaturesByPage, setSignatures] = useState({});
+
+  const pdfContainerRef = React.useRef();
+  const [pdfSize, setPdfSize] = useState(1000);
+
+  React.useEffect(() => {
+    if (!pdfContainerRef.current) {
+      return;
+    }
+    if (pdfContainerRef.current.offsetWidth !== pdfSize) {
+      setPdfSize(pdfContainerRef.current.offsetWidth);
+    }
+  });
+
   // const [gasPrice, setGasPrice] = useState(0);
 
   const handleTabChange = (event, value) => {
@@ -390,24 +417,8 @@ function SimpleTabbedSample() {
   };
 
   const previewSignDocument = async () => {
-    const opt = {
-      margin: 1,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-    };
-
-    window
-      .html2pdf()
-      .from(document.getElementsByClassName('react-pdf__Page')[0])
-      .set(opt)
-      .from(document.getElementsByClassName('react-pdf__Page')[0])
-      .toPdf()
-      .output('datauristring')
-      .then(data => {
-        // console.log(data);
-        setResultPDFContent(data);
-      });
+    const newDoc = await injectSignaturesIntoPDF(pdfContent, signaturesByPage);
+    setResultPDFContent(newDoc);
   };
 
   // getGasPrice();
@@ -528,21 +539,21 @@ function SimpleTabbedSample() {
               </Button>
               <br />
               <br />
-              <div className="PDFPreview">
+              <div className="PDFPreview" ref={pdfContainerRef}>
                 <div className="PDFPreview__container">
                   <div className="PDFPreview__container__document">
                     <Document
                       file={pdfContent}
                       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                     >
-                      <Page pageNumber={pageNumber} />
+                      <Page pageNumber={pageNumber} width={pdfSize} />
                     </Document>
                     <SignaturePlacer
-                      signatures={signaturesByPage[pageNumber] || []}
+                      signatures={signaturesByPage[pageNumber - 1] || []}
                       updateSignatures={signatures => {
                         setSignatures({
-                          ...signatures,
-                          [pageNumber]: signatures
+                          ...signaturesByPage,
+                          [pageNumber - 1]: signatures
                         });
                       }}
                     />
@@ -584,21 +595,21 @@ function SimpleTabbedSample() {
               </Button>
               <br />
               <br />
-              <div className="PDFPreview">
+              <div className="PDFPreview" ref={pdfContainerRef}>
                 <div className="PDFPreview__container">
                   <div className="PDFPreview__container__document">
                     <Document
                       file={pdfContent}
                       onLoadSuccess={({ numPages }) => setNumPages(numPages)}
                     >
-                      <Page pageNumber={pageNumber} />
+                      <Page pageNumber={pageNumber} width={pdfSize} />
                     </Document>
                     <SignaturePlacer
-                      signatures={signaturesByPage[pageNumber] || []}
+                      signatures={signaturesByPage[pageNumber - 1] || []}
                       updateSignatures={signatures => {
                         setSignatures({
-                          ...signatures,
-                          [pageNumber]: signatures
+                          ...signaturesByPage,
+                          [pageNumber - 1]: signatures
                         });
                       }}
                       signOnly
