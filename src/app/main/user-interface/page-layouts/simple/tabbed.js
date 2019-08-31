@@ -36,7 +36,9 @@ function lim(val, min, max) {
   return Math.max(min, Math.min(max, val));
 }
 
-let justDragged = false;
+// component that represent a signature place
+// you can drag it, delete it or sign it (with popup);
+let justDragged = false; // this saved as variable for performance reasons
 function SignPlace({
   place,
   updatePlace,
@@ -231,9 +233,12 @@ function SignPlace({
   );
 }
 
+// Component for showing and creating a list of signatures
 function SignaturePlacer({
   signatures,
   updateSignatures,
+  // use this flag when we can't create new signatures
+  // only sign the document
   signOnly,
   onSignFinish
 }) {
@@ -241,7 +246,9 @@ function SignaturePlacer({
   const [signPlaces, setSignPlaces] = React.useState([]);
 
   // load initial data
+  // we will use local "signPlaces" for performance reasons
   React.useEffect(() => {
+    // we need to overwrite local version as soon as we have a new update
     setSignPlaces(signatures);
   }, [signatures]);
 

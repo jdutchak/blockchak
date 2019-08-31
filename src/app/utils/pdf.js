@@ -43,7 +43,7 @@ export async function injectSignaturesIntoPDF(pdfFile, signaturesByPage) {
 
       page.drawImage(image, {
         x: (width * sign.x1) / 100,
-        y: height * (100 - sign.y1) / 100 - resultHeight,
+        y: (height * (100 - sign.y1)) / 100 - resultHeight,
         width: (width * imageWidth) / 100,
         height: resultHeight
       });
