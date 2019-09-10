@@ -62,6 +62,7 @@ function SignPlace({
       return;
     }
     const onMove = e => {
+      justDragged = true;
       const parent = ref.current.parentElement;
       const box = parent.getBoundingClientRect();
 
@@ -108,7 +109,6 @@ function SignPlace({
     };
 
     const onUp = () => {
-      justDragged = true;
       setIsDragging(false);
       onDragEnd();
       setTimeout(() => {
@@ -147,6 +147,14 @@ function SignPlace({
           if (canSign && !justDragged) {
             setIsSigning(true);
           }
+          if (!canSign && !justDragged) {
+            const placeholder =
+              place.placeholder === 'Sign here' ? 'Initials here' : 'Sign here';
+            updatePlace({
+              ...place,
+              placeholder
+            });
+          }
         }}
         style={{
           left: Math.min(place.x1, place.x2) + '%',
@@ -161,7 +169,7 @@ function SignPlace({
             x
           </div>
         )}
-        Sign here
+        {place.placeholder || 'Sign here'}
       </div>
       {isSigning && (
         <React.Fragment>
@@ -474,7 +482,6 @@ function SimpleTabbedSample() {
             <div>
               <h3 className="mb-16">Create Document</h3>
               <FroalaEditor
-                tag="textarea"
                 config={{
                   attribution: false,
                   autofocus: true

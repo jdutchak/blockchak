@@ -44,7 +44,7 @@
     "react-dom": "16.8.6",
     "react-draggable": "3.3.0",
     "react-frame-component": "4.1.1",
-    "react-froala-wysiwyg": "3.0.3",
+    "react-froala-wysiwyg": "^3.0.5",
     "react-masonry-css": "1.0.12",
     "react-number-format": "4.2.0",
     "react-pdf": "^4.1.0",
